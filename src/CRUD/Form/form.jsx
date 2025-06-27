@@ -1,67 +1,97 @@
-import { useState } from "react";
-import { addPost } from "../../API/PostApi";
-import "./Form.css"; // CSS file import kiya
+import { useEffect, useState } from "react";
+import { addPost, updateData } from "../../API/PostApi";
+import "./Form.css";
 
-export const Form = ({ data, setData }) => {
+export const Form = ({ data, setData, editData, setEditData }) => {
   const [addData, setAddData] = useState({
     title: "",
     body: ""
   });
 
+  // ✅ Pre-fill form when editData changes
+  useEffect(() => {
+    if (editData && Object.keys(editData).length > 0) {
+      setAddData({
+        title: editData.title || "",
+        body: editData.body || ""
+      });
+    }
+  }, [editData]);
+
+  // ✅ Handle input change
   const handleChangeInput = (e) => {
-    const name = e.target.name;
-    const value = e.target.value;
-    setAddData((prev) => {
-      return {
-        ...prev,
-        [name]: value
-      };
-    });
+    const { name, value } = e.target;
+    setAddData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
+  // ✅ Add new post
   const addPostDataFunc = async () => {
-    const res = await addPost(addData);
-    console.log("res", res);
-    if (res.status === 201) {
-      setData([...data, res.data]);
-      setAddData({ title: "", body: "" });
+    try {
+      const res = await addPost(addData);
+      if (res.status === 201) {
+        setData([...data, res.data]);
+        setAddData({ title: "", body: "" });
+      }
+    } catch (error) {
+      console.error("Error adding post:", error);
     }
   };
 
-  const handleSubmitForm = (e) => {
-    e.preventDefault();
-    addPostDataFunc();
+  // ✅ Update existing post
+  const updateAddPostDataFunc = async () => {
+    try {
+      const res = await updateData(editData.id, addData);
+      if (res.status === 200) {
+        setData((prev) =>
+          prev.map((curElem) =>
+            curElem.id === editData.id ? res.data : curElem
+          )
+        );
+        setAddData({ title: "", body: "" });
+        setEditData({});
+      }
+    } catch (error) {
+      console.error("Error updating post:", error);
+    }
   };
 
+  // ✅ Form submission handler
+  const handleSubmitForm = async (e) => {
+    e.preventDefault();
+    const action = e.nativeEvent.submitter.value;
+    if (action === "ADD") {
+      await addPostDataFunc();
+    } else if (action === "EDIT") {
+      await updateAddPostDataFunc();
+    }
+  };
+
+  const isEmpty = Object.keys(editData).length === 0;
+
   return (
-    <>
-      <form onSubmit={handleSubmitForm} className="form-container">
-        <input
-          type="text"
-          autoComplete="off"
-          name="title"
-          id="title"
-          placeholder="Add Title"
-          value={addData.title}
-          onChange={handleChangeInput}
-          className="form-input"
-        />
-
-        <input
-          type="text"
-          autoComplete="off"
-          name="body"
-          id="body"
-          placeholder="Add Body"
-          value={addData.body}
-          onChange={handleChangeInput}
-          className="form-input"
-        />
-
-        <button type="submit" className="form-btn">
-          Add
-        </button>
-      </form>
-    </>
+    <form onSubmit={handleSubmitForm} className="form-container">
+      <input
+        type="text"
+        name="title"
+        placeholder="Add Title"
+        value={addData.title}
+        onChange={handleChangeInput}
+        className="form-input"
+      />
+      <input
+        type="text"
+        name="body"
+        placeholder="Add Body"
+        value={addData.body}
+        onChange={handleChangeInput}
+        className="form-input"
+      />
+      <button type="submit" className="form-btn" value={isEmpty ? "ADD" : "EDIT"}>
+        {isEmpty ? "ADD" : "EDIT"}
+      </button>
+    </form>
   );
 };

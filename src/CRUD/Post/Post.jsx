@@ -5,38 +5,49 @@ import { Form } from '../Form/form.jsx';
 
 export const Post = () => {
   const [data, setData] = useState([]);
-  const getApiFunc = async () => {
-    const myApi = await getPost();
-    const data = myApi.data;
-    console.log(data);
-    setData(data);
-  };
+  const [editData, setEditData] = useState({});
 
+  // ✅ Fetch posts once
   useEffect(() => {
+    const getApiFunc = async () => {
+      try {
+        const res = await getPost();
+        setData(res.data);
+      } catch (err) {
+        console.error("Failed to fetch posts", err);
+      }
+    };
     getApiFunc();
   }, []);
+
+  // ✅ Delete post from API + update state
   const handleDeleteFunc = async (id) => {
     try {
-      const deleteItems = await deletePost(id);
-      if (deleteItems.status === 200) {
-        const afterDeletePostData = data.filter((curElem) => {
-          return curElem.id !== id;
-        });
-        setData(afterDeletePostData);
+      const res = await deletePost(id);
+      if (res.status === 200) {
+        setData(data.filter(post => post.id !== id));
       }
-    } catch (error) {
-      console.log("Error From Delete Function: " + error);
+    } catch (err) {
+      console.error("Delete error:", err);
     }
   };
 
+  // ✅ Send current post to form for editing
+  const handleEditFunc = (curElem) => setEditData(curElem);
+
   return (
-   <>
-   
     <div className="post-container">
       <h1 className="post-title">📰 Latest News</h1>
+
       <section>
-         <Form data={data} setData={setData}/>
-   </section>
+        <Form
+          data={data}
+          setData={setData}
+          editData={editData}
+          setEditData={setEditData}
+        />
+      </section>
+
       <div className="post-list-wrapper">
         <ol className="post-list">
           {data.map((curElem, index) => {
@@ -44,11 +55,25 @@ export const Post = () => {
             return (
               <li key={id} className="post-card">
                 <h2 className="post-index">#{index + 1}</h2>
-                <h3 className="post-card-title">Title: <span>{title}</span></h3>
-                <p className="post-card-body">News: <span>{body}</span></p>
+                <h3 className="post-card-title">
+                  Title: <span>{title}</span>
+                </h3>
+                <p className="post-card-body">
+                  News: <span>{body}</span>
+                </p>
                 <div className="post-card-buttons">
-                  <button className="edit-btn">EDIT</button>
-                  <button className="delete-btn" onClick={() => handleDeleteFunc(id)}>DELETE</button>
+                  <button
+                    className="edit-btn"
+                    onClick={() => handleEditFunc(curElem)}
+                  >
+                    EDIT
+                  </button>
+                  <button
+                    className="delete-btn"
+                    onClick={() => handleDeleteFunc(id)}
+                  >
+                    DELETE
+                  </button>
                 </div>
               </li>
             );
@@ -56,6 +81,5 @@ export const Post = () => {
         </ol>
       </div>
     </div>
-   </>
   );
 };
